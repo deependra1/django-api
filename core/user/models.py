@@ -5,6 +5,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.http import Http404
 
+from core.abstract.models import AbstractModel
+
 
 class UserManager(BaseUserManager):
     def get_object_by_public_id(self, public_id):
@@ -41,7 +43,7 @@ class UserManager(BaseUserManager):
         return user
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(AbstractModel, AbstractBaseUser, PermissionsMixin):
     public_id = models.URLField(db_index=True, unique=True, default=uuid.uuid4, editable=False)
     username = models.CharField(db_index=True, max_length=255, unique=True)
     first_name = models.CharField(max_length=255)
@@ -56,6 +58,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     created = models.DateTimeField(auto_now=True)
     updated = models.DateTimeField(auto_now_add=True)
 
+    posts_liked = models.ManyToManyField("core_post.Post", related_name="liked_by")
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
@@ -67,3 +71,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def name(self):
         return f"{self.first_name} {self.last_name}"
+
+    def like(self, post):
+        return self.posts_liked.add(post)
+
+    def remove_like(self, post):
+        return self.posts_liked.remove(post)
+
+    def has_liked(self, post):
+        return self.posts_liked.filter(pk=post.pk).exists()
